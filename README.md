@@ -1,8 +1,8 @@
 ## FormSubmitter plugin
 
 This is a neat that adds "non-wordpress" form submission
-code into a wordpress/simply static site with all defn
-in YAML file....
+code into a wordpress/simply static site with all
+definitions in a YAML file....
 
 Inserted with shortcode [form-submitter hca-registration]
 
