@@ -86,7 +86,7 @@ class FormSubmitter {
   function render_section( $defn ) {
     return '
   <section class="fs-section'.$this->get_page_class($defn).'"'.
-      $this->render_logic( $defn['logic'] ).'>
+      $this->render_logic( $defn ).'>
     '.
     ( array_key_exists( 'title', $defn ) ? '<h3>'.HTMLentities($defn['title']).'</h3>' : '' ).
       implode( '', array_map( [ $this, 'render_page' ], $defn['pages'] ) ).'
@@ -101,7 +101,7 @@ class FormSubmitter {
       (array_key_exists('code',$defn)?$defn['code']:$this->next_code()).
       '" class="fs-page'.
       $this->get_page_class($defn).'"'.
-      $this->render_logic( $defn['logic'] ).'>
+      $this->render_logic( $defn ).'>
     '.implode( '', array_map( [ $this, 'render_block' ], $defn['defn'] ) ).'
     </div><!-- page -->
 
@@ -118,7 +118,7 @@ class FormSubmitter {
     $output = '
       <div class="fs-question'.
       $this->get_page_class($defn).'"'.
-      $this->render_logic( $defn['logic'] );
+      $this->render_logic( $defn );
     if( array_key_exists( 'width', $defn ) ) {
       $output .= ' style="width: '.$defn['width'].'"';
     }
@@ -174,7 +174,7 @@ class FormSubmitter {
           $extra = $defn['type'] == 'checkbox' ? '[]' : '';
           $x = 'aa';
           $output .= $input.'
-        <ul class="fs-checkbox fs-columns-'.($defn['columns']?$defn['columns']:1).'">'.
+        <ul class="fs-checkbox fs-columns-'.(array_key_exists('columns',$defn)?$defn['columns']:1).'">'.
           implode( '', array_map( function( $r ) use ($type,$extra,$code,$x) {
             return '
           <li><label><input type="'.$type.'" value="'.
@@ -183,7 +183,7 @@ class FormSubmitter {
             HTMLentities( is_array($r) ? $r[1] : $r ).'</label></li>';
           }, $defn['values'] ) ).
           implode( '', array_map( function( $k ) use ($type,$extra,$code,$defn) {
-            if( $defn[$k] ) {
+            if( array_key_exists( $k, $defn ) && $defn[$k] ) {
               return '
             <li><label><input type="'.$type.'" value="'.$k.'" id="'.
               $code.'_'.$k.'" name="'.$code.$extra.'" /> '.ucfirst($k).'</label></li>';
@@ -192,7 +192,7 @@ class FormSubmitter {
           }, [ 'none', 'other' ] ) );
         $output .= '
         </ul>';
-          if( $defn['other'] ) {
+          if( array_key_exists( 'other', $defn ) && $defn['other'] ) {
             $output .= '
         <div class="fs-logic" data-visible ="[&quot;checked&quot;,&quot;'.
             $code.$extra.'&quot;,&quot;other&quot;]">
@@ -206,7 +206,7 @@ class FormSubmitter {
           $output .= '
         <label class="fs-textarea">'.$input.'
           <textarea id="'.$code.'" name="'.$code.'"'.
-          ( $defn['max'] ? ' maxlength="'.$defn['max'].'"' : '' ).
+          ( array_key_exists( 'max', $defn ) && $defn['max'] ? ' maxlength="'.$defn['max'].'"' : '' ).
           '></textarea>
         </label>';
           break;
@@ -214,7 +214,7 @@ class FormSubmitter {
           $output .= '
         <label class="fs-'.$defn['type'].'">'.$input.'
           <span><input type="'.$defn['type'].'" id="'.$code.'" name="'.$code.'" '.
-          ($defn['required'] ? 'required="required" ' : '').
+          ( array_key_exists('required',$defn) && $defn['required'] ? 'required="required" ' : '').
           '/></span>
         </label>';
         ;
@@ -247,7 +247,11 @@ class FormSubmitter {
     return $this->sequence++;
   }
   
-  function render_logic( $logic ) {
+  function render_logic( $defn ) {
+    if( ! array_key_exists( 'logic', $defn ) || ! $defn['logic'] ) {
+      return '';
+    }
+    $logic = $defn['logic'];
     if( $logic ) {
       return implode( '', array_map( function($k) use ($logic) {
         return ' data-'.$k.'="'.HTMLentities(json_encode($logic[$k])).'"';
