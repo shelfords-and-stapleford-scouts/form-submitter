@@ -35,41 +35,43 @@
   var keyup_timer, backup_timer,form_code,session;
 
   function load_in_response() { // We will need to do this with AJAX in the survey...
-    //$.get( '/form.php', [ 'code': code ] );
+    //$.get( '/wp-content/plugins/form-submitter/form.php', [ 'code': code ] );
     // If exists cookie... we get the response back from the database....
-    $.get( '/form.php', { 'code': form_code })
-      .always(function( data ) {
-        $.each(data,function(nm,vls){
-          var ex = Array.isArray(vls) ? '[]' : '',
-              e  = $('input[name="'+nm+ex+'"]'),
-              h;
-          if(!e.length) {
-            e = $('select[name="'+nm+ex+'"]');
-            if( ! e.length ) {
-              return;
+    $.get( '/wp-content/plugins/form-submitter/form.php', { 'code': form_code })
+      .always(function( data ) { console.log("A");
+        if( data ) {
+          $.each(data,function(nm,vls){
+            var ex = Array.isArray(vls) ? '[]' : '',
+                e  = $('input[name="'+nm+ex+'"]'),
+                h;
+            if(!e.length) {
+              e = $('select[name="'+nm+ex+'"]');
+              if( ! e.length ) {
+                return;
+              }
+              e.eq(0).val( vls[0] );
             }
-            e.eq(0).val( vls[0] );
-          }
-          if( e.eq(0).attr('type') === 'radio' ||
-              e.eq(0).attr('type') === 'checkbox' ) {
-            h = {};
-            if(Array.isArray(vls)) {
-              $.each(vls,function(i,v){
-                h[v]=1;
+            if( e.eq(0).attr('type') === 'radio' ||
+                e.eq(0).attr('type') === 'checkbox' ) {
+              h = {};
+              if(Array.isArray(vls)) {
+                $.each(vls,function(i,v){
+                  h[v]=1;
+                });
+              } else {
+                h[vls]=1;
+              }
+              e.each(function(){
+                if( h[ $(this).val() ] ) {
+                  $(this).prop('checked', 'checked');
+                  $(this).closest('label').addClass('fs-checked');
+                }
               });
             } else {
-              h[vls]=1;
+              e.val( vls );
             }
-            e.each(function(){
-              if( h[ $(this).val() ] ) {
-                $(this).prop('checked', 'checked');
-                $(this).closest('label').addClass('fs-checked');
-              }
-            });
-          } else {
-            e.val( vls );
-          }
-        });
+          });
+        }
         add_buttons();
         activate_question();
         add_nav();                      // Sets up navigation menu + embeds videos
@@ -95,7 +97,7 @@
     _act( $n, $n.closest('section') );
   }
 
-  function _act_q( $n ) {   
+  function _act_q( $n ) {
     if( $n.attr('id') ) {
       $('input[name="fs_q"]').val( $n.attr('id') );
     }
@@ -116,7 +118,7 @@
     });
     $('#secnav li').last().addClass('fs-last');
   }
-  
+
   function add_next_button() { // Adding functionality to next
     $('body').on('click','.fs-next',function() {
       var $n = $('div.fs-page').filter('.fs-active'),
@@ -128,6 +130,10 @@
       if( $n.hasClass('fs-incomplete') ) {
         return;
       }
+      if($n.hasClass('fs-pageflag-confirm')) { // This is the confirm page ... so we need to submit it!
+        console.log( "FINAL SUBMIT" );
+        return;
+      }
 
       if( $n.next('.fs-page').length ) {  // Can we go next in the same section...
         $n.removeClass('fs-active');      // deactive current question...
@@ -136,6 +142,7 @@
         _act_q( $n );
       } else if($p.next('section').length) { // Else can we jump sections...
         _deact( $n, $p );
+
         $p = $p.next('section');            // Jump to next section
         $n = $p.find('.fs-page').eq(0);     //    and question
         _act( $n, $p );
@@ -144,7 +151,6 @@
       }
       _check( $n, $p ); // Check the state of the new entry to see if it we
                       // Need to disable next button!
-
       if($n.hasClass('fs-hidden')) {
         $('.fs-next').trigger('click');
       }
@@ -231,7 +237,7 @@
   function add_on_change_methods() {
     var skip_before_unload = false;
     if( ! $('.fs-form').length ) {
-      skip_before_unload = true; 
+      skip_before_unload = true;
     }
     $('.no-on-unload').on('click',function(){
       skip_before_unload = true;
@@ -256,7 +262,6 @@
           window.clearTimeout(keyup_timer);
         }
         keyup_timer = window.setTimeout( function() {
-          console.log("KT");
           return to_do_on_change(this);
         },150 );
       })
@@ -272,6 +277,11 @@
           return false;
         }
         window.onbeforeunload = null;
+        $('#submitform').find(':input').attr('readonly','readonly'); // Make form readonly ....!
+        $.post(
+          $('#submitform').attr('action'),
+          $('#submitform').serialize()+'&__action=confirm'
+        );
         return true;
       });
   }
@@ -417,8 +427,8 @@
     $('.fs-next').removeClass('fs-disabled')
               .removeClass('fs-pending');
     $('.fs-next').html( n.hasClass('fs-pageflag-confirm') ? 'Confirm' : 'Next' );
-      
-    
+
+
     if( p.next('section').length === 0 &&
         n.next('.fs-page').length   === 0 ||
         n.hasClass('fs-pageflag-success') ||
@@ -572,7 +582,7 @@
   $(window).resize(function () {
     $('ul.fs-checkbox:visible, ul.fs-radio:visible').each(function () { flow_elements($(this)); });
   });
-  
+
   var lastHeight = 0;
   function pollSize() {
     var newHeight = $(window).height();
