@@ -28,6 +28,11 @@ form.fs-form            { margin: 0 auto; max-width: 960px; padding: 0 10px; cle
 .fs-form .fs-columns-4 label                          { float: left; width: 23%     }
 ul.fs-checkbox:after                                  { content: ""; clear: both; display: table; } /* Clear fix */
 
+.fs-form p, .fs-form h3, .fs-form h4             { padding: 5px; margin: 5px }
+.fs-form h3, .fs-form h4 { margin-top: 10px }
+.fs-question p, .fs-question h3, .fs-question h4 { padding: 0 }
+
+.fs-form h4 { font-size: 1.2em }
 /* Normal input element */
 .fs-form input:invalid        { background-color: #fee }
 
@@ -50,6 +55,7 @@ ul.fs-checkbox:after                                  { content: ""; clear: both
 /* Navigation buttons at the bottom of the page */
 .fs-buttons span    { width: 48%; border-radius: 5px; padding: 0.5em; margin: 6px;
                       box-sizing: border-box;  display: block; font-size: 1.3em; font-weight: bold}
+.fs-buttons:after   { content: ""; clear: both; display: table; } /* Clear fix */
 .fs-prev            { float: left; background-color: #ccf  }
 .fs-next            { float: right; background-color: #cfc; text-align: right }
 .fs-prev:before     { content: '\00AB'; padding-right: 0.5em }
