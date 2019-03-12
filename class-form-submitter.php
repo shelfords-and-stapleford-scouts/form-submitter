@@ -29,13 +29,18 @@ class FormSubmitter {
   var $sequence;
   function __construct( ) {
     $this->sequence = 'aaaa';
+    $root = array_key_exists( 'DOCUMENT_ROOT', $_SERVER )
+          ? dirname( $_SERVER['DOCUMENT_ROOT'] )
+          : dirname(dirname(dirname(dirname(dirname(__FILE__)))));
     $this->root_path = implode( DIRECTORY_SEPARATOR, [
-      dirname( $_SERVER['DOCUMENT_ROOT'] ),
+      $root,
       'data',
       'config',
       'forms'
     ] );
-    add_action( 'wp_enqueue_scripts', array($this,'cssjs') );
+    if(function_exists( 'add_action' )) {
+      add_action( 'wp_enqueue_scripts', array($this,'cssjs') );
+    }
   }  
   function cssjs() {
     error_log("JS");
@@ -49,6 +54,7 @@ class FormSubmitter {
   }
   function fetch( ) {
     $file = $this->root_path.DIRECTORY_SEPARATOR.$this->code.'.yaml';
+    error_log( $file );
     if( file_exists( $file ) ) {
       $this->defn = yaml_parse_file( $file ); 
     } else {
@@ -63,7 +69,7 @@ class FormSubmitter {
       return '<p>Unable to find form with given code</p>';
     } 
     return '
-<form method="post" action="/form.php"
+<form method="post" action="/wp-content/plugins/form-submitter/form.php"
       class="fs-form"
       accept-charset="UTF-8"
       id="submitform"
@@ -79,24 +85,26 @@ class FormSubmitter {
   
   function render_section( $defn ) {
     return '
-    <section class="fs-section'.$this->get_page_class($defn).'"'.
+  <section class="fs-section'.$this->get_page_class($defn).'"'.
       $this->render_logic( $defn['logic'] ).'>
     '.
     ( array_key_exists( 'title', $defn ) ? '<h3>'.HTMLentities($defn['title']).'</h3>' : '' ).
       implode( '', array_map( [ $this, 'render_page' ], $defn['pages'] ) ).'
-    </section>
+  </section>
+
 ';
   }
 
   function render_page( $defn ) {
     return '
-      <div id="'.
+    <div id="'.
       (array_key_exists('code',$defn)?$defn['code']:$this->next_code()).
       '" class="fs-page'.
       $this->get_page_class($defn).'"'.
       $this->render_logic( $defn['logic'] ).'>
     '.implode( '', array_map( [ $this, 'render_block' ], $defn['defn'] ) ).'
-      </div><!-- page -->
+    </div><!-- page -->
+
 ';
   }
 
@@ -120,31 +128,38 @@ class FormSubmitter {
         <div class="fs-intro">
           '.$this->render_intro( $defn['intro'] ).'
         </div><!-- intro -->';
+    } elseif( $defn['type'] == 'heading' ) {
+      $output .= '
+        <h4>
+          '.$this->render_intro( $defn['question'] ).'
+        </h4>';
     } else {
       $code = array_key_exists( 'code', $defn ) ? $defn['code'] : $this->next_code();
       $input = '';
       if( array_key_exists( 'question', $defn ) ) {
         $input .= '
-        <p><strong>'. HTMLentities( $defn['question'] ).'</strong></p>';
+          <p><strong>'. HTMLentities( $defn['question'] ).'</strong></p>';
       }
       if( array_key_exists( 'intro', $defn ) ) {
         $input .= '
-        <div class="fs-intro">
-          '.$this->render_intro( $defn['intro'] ).'
-        </div><!-- intro -->';
+          <div class="fs-intro">
+           '.$this->render_intro( $defn['intro'] ).'
+          </div><!-- intro -->';
       }
       switch( $defn['type'] ) {
         case 'select':
         case 'country':
           $values = $defn['type'] == 'country' ? $this->countries() : $defn['values'];
-          $output .= '<label>'.$input.'
+          $output .= '
+          <label>'.$input.'
             <select name="'.$code.'" id="'.$code.'">
               <option value="">-- select --</option>'.
           implode( '', array_map( function( $r ) {
             return '<option value="'.HTMLentities( is_array($r) ? $r[0] : $r ).'">'.
                   HTMLentities( is_array($r) ? $r[1] : $r ).'</option>';
           }, $values ) ). '
-          </select></label>';
+            </select>
+          </label>';
         break;
         case 'checkbox':
         case 'radio':
@@ -179,28 +194,32 @@ class FormSubmitter {
         </ul>';
           if( $defn['other'] ) {
             $output .= '
-          <div class="fs-logic" data-visible ="[&quot;checked&quot;,&quot;'.
+        <div class="fs-logic" data-visible ="[&quot;checked&quot;,&quot;'.
             $code.$extra.'&quot;,&quot;other&quot;]">
-            <input type="text" value="" id="'.
+          <input type="text" value="" id="'.
             $code.'_other_text" name="'.
             $code.'_other_text" placeholder="Other please specify" />
-          </div><!-- logic -->';
+        </div><!-- logic -->';
           }
         break;
         case 'textarea':
-          $output .= '<label class="fs-textarea">'.$input.'
+          $output .= '
+        <label class="fs-textarea">'.$input.'
           <textarea id="'.$code.'" name="'.$code.'"'.
           ( $defn['max'] ? ' maxlength="'.$defn['max'].'"' : '' ).
-          '></textarea></label>';
+          '></textarea>
+        </label>';
           break;
         default:        
-          $output .= '<label class="fs-'.$defn['type'].'">'.$input.'
+          $output .= '
+        <label class="fs-'.$defn['type'].'">'.$input.'
           <span><input type="'.$defn['type'].'" id="'.$code.'" name="'.$code.'" '.
           ($defn['required'] ? 'required="required" ' : '').
-          '/></span></label>';
+          '/></span>
+        </label>';
         ;
       }
-      $output .= '</label>';
+      //$output .= '</label>';
     }
     if( array_key_exists( 'notes', $defn ) ) {
       $output .= '
@@ -381,7 +400,6 @@ class FormSubmitter {
     add_shortcode( 'form-submitter', array( $this, 'form_shortcode' ) );
   }
   function form_shortcode( $atts ) {
-    print $this->set_code( $atts[0] )->fetch()->render();
-    return;
+    return $this->set_code( $atts[0] )->fetch()->render();
   }
 }
